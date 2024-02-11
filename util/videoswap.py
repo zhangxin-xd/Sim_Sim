@@ -118,5 +118,5 @@ def video_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_r
         clips = clips.set_audio(video_audio_clip)
 
 
-    clips.write_videofile(save_path,audio_codec='aac')
+    clips.write_videofile(save_path,audio_codec='aac',)
 
