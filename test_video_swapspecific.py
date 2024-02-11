@@ -94,5 +94,5 @@ if __name__ == '__main__':
         specific_person_id_nonorm = model.netArc(specific_person_downsample)
 
         video_swap(opt.video_path, latend_id,specific_person_id_nonorm, opt.id_thres, \
-            model, app, opt.output_path,temp_results_dir=opt.temp_path,no_simswaplogo=opt.no_simswaplogo,use_mask=opt.use_mask,crop_size=crop_size)
+            model, app, opt.output_path,temp_results_dir=opt.temp_path,no_simswaplogo=opt.no_simswaplogo,use_mask=opt.use_mask,crop_size=crop_size, start = opt.start, end = opt.end, start_1 = opt.start_1, end_1 = opt.end_1)
 

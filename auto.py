@@ -78,6 +78,7 @@ cmd = 'python test_video_swapsingle.py \
 --start 0.2 --end 0.7 \
 --start_1 1.0 --end_1 1.0 '
 os.system(cmd)
+
 # cmd = 'python test_video_swapsingle.py \
 # --crop_size 224 --name people \
 # --Arc_path arcface_model/arcface_checkpoint.tar \

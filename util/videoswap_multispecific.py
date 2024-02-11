@@ -20,7 +20,7 @@ def _totensor(array):
     img = tensor.transpose(0, 1).transpose(0, 2).contiguous()
     return img.float().div(255)
 
-def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id_thres, swap_model, detect_model, save_path, temp_results_dir='./temp_results', crop_size=224, no_simswaplogo = False,use_mask =False):
+def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id_thres, swap_model, detect_model, save_path, temp_results_dir='./temp_results', crop_size=224, no_simswaplogo = False, use_mask =False, start = 0.0, end = 1.0, start_1 = 0.0, end_1 = 1.0):
     video_forcheck = VideoFileClip(video_path)
     if video_forcheck.audio is None:
         no_audio = True
@@ -61,57 +61,70 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
         net =None
 
     # while ret:
+    star_point = int(start*frame_count)
+    end_point = int(end*frame_count)
+    star_point_1 = int(start_1*frame_count)
+    end_point_1 = int(end_1*frame_count)
     for frame_index in tqdm(range(frame_count)): 
         ret, frame = video.read()
-        if  ret:
-            detect_results = detect_model.get(frame,crop_size)
+        if frame_index in range (star_point, end_point) or frame_index in range (star_point_1, end_point_1):
+            if  ret:
+                detect_results = detect_model.get(frame,crop_size)
 
-            if detect_results is not None:
-                # print(frame_index)
-                if not os.path.exists(temp_results_dir):
-                        os.mkdir(temp_results_dir)
-                frame_align_crop_list = detect_results[0]
-                frame_mat_list = detect_results[1]
+                if detect_results is not None:
+                    # print(frame_index)
+                    if not os.path.exists(temp_results_dir):
+                            os.mkdir(temp_results_dir)
+                    frame_align_crop_list = detect_results[0]
+                    frame_mat_list = detect_results[1]
 
-                id_compare_values = [] 
-                frame_align_crop_tenor_list = []
-                for frame_align_crop in frame_align_crop_list:
+                    id_compare_values = [] 
+                    frame_align_crop_tenor_list = []
+                    for frame_align_crop in frame_align_crop_list:
 
-                    # BGR TO RGB
-                    # frame_align_crop_RGB = frame_align_crop[...,::-1]
+                        # BGR TO RGB
+                        # frame_align_crop_RGB = frame_align_crop[...,::-1]
 
-                    frame_align_crop_tenor = _totensor(cv2.cvtColor(frame_align_crop,cv2.COLOR_BGR2RGB))[None,...].cuda()
+                        frame_align_crop_tenor = _totensor(cv2.cvtColor(frame_align_crop,cv2.COLOR_BGR2RGB))[None,...].cuda()
 
-                    frame_align_crop_tenor_arcnorm = spNorm(frame_align_crop_tenor)
-                    frame_align_crop_tenor_arcnorm_downsample = F.interpolate(frame_align_crop_tenor_arcnorm, size=(112,112))
-                    frame_align_crop_crop_id_nonorm = swap_model.netArc(frame_align_crop_tenor_arcnorm_downsample)
-                    id_compare_values.append([])
-                    for source_specific_id_nonorm_tmp in source_specific_id_nonorm_list:
-                        id_compare_values[-1].append(mse(frame_align_crop_crop_id_nonorm,source_specific_id_nonorm_tmp).detach().cpu().numpy())
-                    frame_align_crop_tenor_list.append(frame_align_crop_tenor)
+                        frame_align_crop_tenor_arcnorm = spNorm(frame_align_crop_tenor)
+                        frame_align_crop_tenor_arcnorm_downsample = F.interpolate(frame_align_crop_tenor_arcnorm, size=(112,112))
+                        frame_align_crop_crop_id_nonorm = swap_model.netArc(frame_align_crop_tenor_arcnorm_downsample)
+                        id_compare_values.append([])
+                        for source_specific_id_nonorm_tmp in source_specific_id_nonorm_list:
+                            id_compare_values[-1].append(mse(frame_align_crop_crop_id_nonorm,source_specific_id_nonorm_tmp).detach().cpu().numpy())
+                        frame_align_crop_tenor_list.append(frame_align_crop_tenor)
 
-                id_compare_values_array = np.array(id_compare_values).transpose(1,0)
-                min_indexs = np.argmin(id_compare_values_array,axis=0)
-                min_value = np.min(id_compare_values_array,axis=0)
+                    id_compare_values_array = np.array(id_compare_values).transpose(1,0)
+                    min_indexs = np.argmin(id_compare_values_array,axis=0)
+                    min_value = np.min(id_compare_values_array,axis=0)
 
-                swap_result_list = [] 
-                swap_result_matrix_list = []
-                swap_result_ori_pic_list = []
-                for tmp_index, min_index in enumerate(min_indexs):
-                    if min_value[tmp_index] < id_thres:
-                        swap_result = swap_model(None, frame_align_crop_tenor_list[tmp_index], target_id_norm_list[min_index], None, True)[0]
-                        swap_result_list.append(swap_result)
-                        swap_result_matrix_list.append(frame_mat_list[tmp_index])
-                        swap_result_ori_pic_list.append(frame_align_crop_tenor_list[tmp_index])
+                    swap_result_list = [] 
+                    swap_result_matrix_list = []
+                    swap_result_ori_pic_list = []
+                    for tmp_index, min_index in enumerate(min_indexs):
+                        if min_value[tmp_index] < id_thres:
+                            swap_result = swap_model(None, frame_align_crop_tenor_list[tmp_index], target_id_norm_list[min_index], None, True)[0]
+                            swap_result_list.append(swap_result)
+                            swap_result_matrix_list.append(frame_mat_list[tmp_index])
+                            swap_result_ori_pic_list.append(frame_align_crop_tenor_list[tmp_index])
+                        else:
+                            pass
+
+
+
+                    if len(swap_result_list) !=0:
+                        
+                        reverse2wholeimage(swap_result_ori_pic_list,swap_result_list, swap_result_matrix_list, crop_size, frame, logoclass,\
+                            os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)),no_simswaplogo,pasring_model =net,use_mask=use_mask, norm = spNorm)
                     else:
-                        pass
+                        if not os.path.exists(temp_results_dir):
+                            os.mkdir(temp_results_dir)
+                        frame = frame.astype(np.uint8)
+                        if not no_simswaplogo:
+                            frame = logoclass.apply_frames(frame)
+                        cv2.imwrite(os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)), frame)
 
-
-
-                if len(swap_result_list) !=0:
-                    
-                    reverse2wholeimage(swap_result_ori_pic_list,swap_result_list, swap_result_matrix_list, crop_size, frame, logoclass,\
-                        os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)),no_simswaplogo,pasring_model =net,use_mask=use_mask, norm = spNorm)
                 else:
                     if not os.path.exists(temp_results_dir):
                         os.mkdir(temp_results_dir)
@@ -119,16 +132,16 @@ def video_swap(video_path, target_id_norm_list,source_specific_id_nonorm_list,id
                     if not no_simswaplogo:
                         frame = logoclass.apply_frames(frame)
                     cv2.imwrite(os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)), frame)
-
             else:
-                if not os.path.exists(temp_results_dir):
-                    os.mkdir(temp_results_dir)
-                frame = frame.astype(np.uint8)
-                if not no_simswaplogo:
-                    frame = logoclass.apply_frames(frame)
-                cv2.imwrite(os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)), frame)
+                break
+                
         else:
-            break
+            if not os.path.exists(temp_results_dir):
+                os.mkdir(temp_results_dir)
+            frame = frame.astype(np.uint8)
+            if not no_simswaplogo:
+                frame = logoclass.apply_frames(frame)
+            cv2.imwrite(os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)), frame)
 
     video.release()
 
