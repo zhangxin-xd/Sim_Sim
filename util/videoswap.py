@@ -27,7 +27,7 @@ def _totensor(array):
     img = tensor.transpose(0, 1).transpose(0, 2).contiguous()
     return img.float().div(255)
 
-def video_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_results_dir='./temp_results', crop_size=224, no_simswaplogo = False,use_mask =False):
+def video_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_results_dir='./temp_results', crop_size=224, no_simswaplogo = False, use_mask =False, start = 0.0, end = 1.0, start_1 = 0.0, end_1 = 1.0):
     video_forcheck = VideoFileClip(video_path)
     # audio check 
     if video_forcheck.audio is None:
@@ -67,12 +67,14 @@ def video_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_r
         net =None
 
     # while ret:
-    star_point = int(0.2*frame_count)
-    end_point = int(0.6*frame_count)
+    star_point = int(start*frame_count)
+    end_point = int(end*frame_count)
+    star_point_1 = int(start_1*frame_count)
+    end_point_1 = int(end_1*frame_count)
     for frame_index in tqdm(range(frame_count)): 
         ret, frame = video.read() # read one frame 
         # swap part of video
-        if frame_index in range (star_point, end_point):
+        if frame_index in range (star_point, end_point) or frame_index in range (star_point_1, end_point_1):
 
             if  ret:
                 

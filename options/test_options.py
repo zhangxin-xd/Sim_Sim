@@ -34,5 +34,9 @@ class TestOptions(BaseOptions):
         self.parser.add_argument('--no_simswaplogo', default=True, help='Remove the watermark')
         self.parser.add_argument('--use_mask', default=True, help='Use mask for better result')
         self.parser.add_argument('--crop_size', type=int, default=224, help='Crop of size of input image')
+        self.parser.add_argument('--start', type=float, default=0.0, help='start point of manipulation')
+        self.parser.add_argument('--end', type=float, default=1.0, help='end point of manipulation')
+        self.parser.add_argument('--start_1', type=float, default=1.0, help='start point of manipulation')
+        self.parser.add_argument('--end_1', type=float, default=1.0, help='end point of manipulation')
         
         self.isTrain = False
