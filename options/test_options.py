@@ -31,7 +31,7 @@ class TestOptions(BaseOptions):
         self.parser.add_argument("--temp_path", type=str, default='./temp_results', help="path to save temporarily images")
         self.parser.add_argument("--output_path", type=str, default='./output/3de6ea4b2f5fc722.mp4', help="results path")
         self.parser.add_argument('--id_thres', type=float, default=0.03, help='how many test images to run')
-        self.parser.add_argument('--no_simswaplogo', default=True, action='store_true', help='Remove the watermark')
+        self.parser.add_argument('--no_simswaplogo', default=True, help='Remove the watermark')
         self.parser.add_argument('--use_mask', default=True, help='Use mask for better result')
         self.parser.add_argument('--crop_size', type=int, default=224, help='Crop of size of input image')
         
